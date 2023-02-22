@@ -1,3 +1,5 @@
+import sys
+
 import mysql.connector
 import requests
 from bs4 import BeautifulSoup
@@ -50,7 +52,11 @@ if __name__ == "__main__":
                 path = [value for (value,) in cursor.fetchall()]
                 path.insert(0, root)
 
-                new_date = run_scraper(update_url, path).strip()
+                try:
+                    new_date = run_scraper(update_url, path).strip()
+                except:
+                    print(f"A {name} scraper failed.", file=sys.stderr)
+                    continue
                 dates.append(new_date)
 
             dates.sort()
