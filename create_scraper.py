@@ -31,7 +31,7 @@ if __name__ == '__main__':
     path = create_scraper(update_url, target_text)
 
     with mysql.connector.connect(
-            host="127.0.0.1",
+            host="192.168.1.3",
             port=3306,
             user="tgcs",
             password="tgcs",
@@ -42,3 +42,5 @@ if __name__ == '__main__':
         scraper_id = cursor.lastrowid
         cursor.executemany("INSERT INTO scraper_path (scraper_id, `order`, `value`) VALUES (%s, %s, %s)", [(scraper_id, index, value) for index, value in enumerate(path[1:])])
         tgcs_db.commit()
+
+        print("Successfully created scraper")

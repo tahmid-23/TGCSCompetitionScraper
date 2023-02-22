@@ -1,6 +1,7 @@
 import mysql.connector
 import requests
 from bs4 import BeautifulSoup
+from termcolor import cprint
 
 
 def run_scraper(url, path):
@@ -32,11 +33,12 @@ if __name__ == "__main__":
         experiences = cursor.fetchall()
 
         for (experience_id, name, update_url) in experiences:
+            print(f"Updating {name}...")
             if update_url is None:
                 print(f"No update url for {name}, skipping...")
                 continue
 
-            cursor.execute("SELECT scraper_id, root FROM scraper WHERE experience_id = ?", (experience_id,))
+            cursor.execute("SELECT scraper_id, root FROM scraper WHERE experience_id = %s", (experience_id,))
             scrapers = cursor.fetchall()
 
             if len(scrapers) == 0:
@@ -44,38 +46,41 @@ if __name__ == "__main__":
 
             dates = []
             for (scraper_id, root) in scrapers:
-                cursor.execute("SELECT value FROM scraper_path WHERE scraper_id = ? ORDER BY `order`", (scraper_id,))
-                path = [value for value in cursor.fetchall()]
+                cursor.execute("SELECT value FROM scraper_path WHERE scraper_id = %s ORDER BY `order`", (scraper_id,))
+                path = [value for (value,) in cursor.fetchall()]
                 path.insert(0, root)
 
-                dates.append(run_scraper(update_url, path))
+                new_date = run_scraper(update_url, path).strip()
+                dates.append(new_date)
 
             dates.sort()
 
-            cursor.execute("SELECT date_id, description FROM important_date WHERE experience_id = ?", (experience_id,))
+            cursor.execute("SELECT date_id, description FROM important_date WHERE experience_id = %s", (experience_id,))
             old_dates_result = cursor.fetchall()
 
-            old_dates = [date[0] for date in old_dates_result]
+            old_dates = [date[1] for date in old_dates_result]
             old_dates.sort()
 
             if dates == old_dates:
                 print(f"No new dates for {name}, skipping...")
+                continue
 
             print("Old dates:")
             for date in old_dates:
-                print(f"- {date}\n")
-            print("\n")
+                cprint(f"- {date}", "red")
+            print()
 
             print("New dates:")
             for date in dates:
-                print(f"- {date}\n")
-            print("\n")
+                cprint(f"+ {date}", "green")
+            print()
 
-            should_update = input("Update important dates? Y/N")
+            should_update = input("Update important dates? Y/N ")
             while should_update.lower() != "y" and should_update.lower() != "n":
-                should_update = input("Invalid response, please type Y/N")
+                should_update = input("Invalid response, please type Y/N ")
 
             if should_update.lower() == "y":
-                for date in old_dates:
-                    cursor.execute("INSERT INTO important_date (experience_id, description) VALUES(?, ?)", dates)
+                cursor.executemany("DELETE FROM important_date WHERE date_id = %s", [(old_date[0],) for old_date in old_dates_result])
+                cursor.executemany("INSERT INTO important_date (experience_id, description) VALUES(%s, %s)", [(experience_id, date) for date in dates])
 
+            tgcs_db.commit()
