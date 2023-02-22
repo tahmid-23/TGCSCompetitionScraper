@@ -24,9 +24,9 @@ def create_scraper(url, target_text):
 
 
 if __name__ == '__main__':
-    experience_id = input("experience_id:\t")
-    update_url = input("update_url:\t")
-    target_text = input("target text:\t")
+    experience_id = input("experience_id: ")
+    update_url = input("update_url: ")
+    target_text = input("target text: ")
 
     path = create_scraper(update_url, target_text)
 
@@ -37,7 +37,8 @@ if __name__ == '__main__':
             password="tgcs",
             database="tgcs_competition"
     ) as tgcs_db, tgcs_db.cursor() as cursor:
-        cursor.execute("UPDATE experience SET update_url = ? WHERE experience_id = ?", (update_url, experience_id))
-        cursor.execute("INSERT INTO scraper (experience_id, root) VALUES (?, ?)", (experience_id, path[0]))
+        cursor.execute("UPDATE experience SET update_url = %s WHERE experience_id = %s", (update_url, experience_id))
+        cursor.execute("INSERT INTO scraper (experience_id, root) VALUES (%s, %s)", (experience_id, path[0]))
         scraper_id = cursor.lastrowid
-        cursor.executemany("INSERT INTO scraper_path (scraper_id, order, value)", [(scraper_id, index, value) for index, value in enumerate(path[1:])])
+        cursor.executemany("INSERT INTO scraper_path (scraper_id, `order`, `value`) VALUES (%s, %s, %s)", [(scraper_id, index, value) for index, value in enumerate(path[1:])])
+        tgcs_db.commit()
